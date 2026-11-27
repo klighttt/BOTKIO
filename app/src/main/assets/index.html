@@ -215,6 +215,20 @@ progress{margin-bottom:19px;height:6px}
       <button id="admin-back" class="outline" type="button">К списку пользователей</button>
       <h2 id="admin-profile"></h2>
       <p id="admin-dates" class="intro"></p>
+      <p id="admin-usage" class="intro"></p>
+      <div id="admin-mood" class="result-hero" hidden>
+        <h2>Настроение пользователя</h2>
+        <time class="result-date" id="admin-result-date"></time>
+        <div class="mood-orbit" aria-hidden="true">
+          <svg viewBox="0 0 112 112"><circle class="orbit-track" cx="56" cy="56" r="51"/><circle class="orbit-fill" id="admin-score-ring" cx="56" cy="56" r="51" pathLength="100"/></svg>
+          <div class="face" id="admin-face"></div>
+        </div>
+        <p class="score"><span id="admin-score"></span><span class="score-scale"> / 10</span></p>
+        <p class="mood-label" id="admin-mood-label"></p>
+      </div>
+      <p id="admin-no-result" class="empty" hidden>Опрос ещё не пройден.</p>
+      <h2>Личная заметка</h2>
+      <p id="admin-note" class="history-note"></p>
       <h2>История чата</h2>
       <ul id="admin-dialog"></ul>
       <form id="reply-form" class="new-form">
@@ -263,7 +277,7 @@ progress{margin-bottom:19px;height:6px}
     <div class="screen-card note">
       <details>
         <summary>Личная заметка</summary>
-        <p>Что повлияло на твоё настроение? Заметка сохранится в твоём аккаунте.</p>
+        <p>Что повлияло на твоё настроение? Сохранённая заметка доступна тебе и администратору.</p>
         <form id="note-form">
           <textarea id="note" aria-label="Личная заметка" maxlength="500" rows="3" placeholder="Например, удалось закончить важное дело"></textarea>
           <button class="primary" type="submit">Сохранить заметку</button>
@@ -414,6 +428,7 @@ let targetId = null;
 let accountEpoch = 0;
 let chatBusy = false;
 let logoutBusy = false;
+let usageSample = null;
 
 function formatDate(date) {
   const parsed = new Date(date + 'T12:00:00Z');
@@ -446,6 +461,7 @@ async function api(path, data) {
 function resetAccount() {
   accountEpoch += 1;
   account = savedResult = targetId = noteDay = null;
+  usageSample = null;
   answers.fill(null);
   currentQuestion = 0;
   for (const id of ['note', 'support-text', 'reply-text', 'password']) byId(id).value = '';
@@ -469,6 +485,7 @@ async function refreshSession() {
     account = state.user;
     savedResult = state.result ?? null;
     if (account) {
+      sampleUsage();
       applyStyle(account.style);
       openMain();
     } else showScreen('account');
@@ -511,14 +528,19 @@ function renderQuestion(moveFocus = true) {
   showScreen('survey', moveFocus);
 }
 
-function renderResult({date, score}, moveFocus = true) {
+function fillMoodCard({date, score}, prefix = '') {
   const mood = moodFor(score);
-  byId('result-date').dateTime = date;
-  byId('result-date').textContent = formatDate(date);
-  byId('score-ring').setAttribute('stroke-dasharray', String(score * 10) + ' 100');
-  byId('face').textContent = mood.face;
-  byId('score').textContent = score;
-  byId('mood-label').textContent = mood.label;
+  byId(prefix + 'result-date').dateTime = date;
+  byId(prefix + 'result-date').textContent = formatDate(date);
+  byId(prefix + 'score-ring').setAttribute('stroke-dasharray', String(score * 10) + ' 100');
+  byId(prefix + 'face').textContent = mood.face;
+  byId(prefix + 'score').textContent = score;
+  byId(prefix + 'mood-label').textContent = mood.label;
+  return mood;
+}
+
+function renderResult(result, moveFocus = true) {
+  const mood = fillMoodCard(result);
   const items = mood.advice.map(([title, detail], index) => {
     const item = document.createElement('li');
     const heading = document.createElement('strong');
@@ -840,6 +862,13 @@ async function showUser(id) {
     const {user, messages, activity} = profile;
     byId('admin-profile').textContent = user.login + ' · ID ' + user.id;
     byId('admin-dates').textContent = 'Регистрация: ' + dateTime(user.created_at) + ' · Последний вход: ' + dateTime(user.last_login);
+    byId('admin-mood').hidden = !profile.result;
+    byId('admin-no-result').hidden = Boolean(profile.result);
+    if (profile.result) fillMoodCard(profile.result, 'admin-');
+    byId('admin-note').textContent = profile.result?.note || 'Заметки пока нет.';
+    const seconds = profile.usage_seconds;
+    byId('admin-usage').textContent = 'Время в приложении: ' + (seconds == null ? 'нет данных' :
+      Math.floor(seconds / 3600) + ' ч ' + Math.floor(seconds / 60) % 60 + ' мин ' + seconds % 60 + ' с');
     drawMessages('admin-dialog', messages);
     byId('admin-events').replaceChildren(...activity.map(event => {
       const li = document.createElement('li');
@@ -869,6 +898,18 @@ bindForm('reply-form', async epoch => {
 byId('open-admin').onclick = showUsers;
 byId('admin-back').onclick = showUsers;
 window.setInterval(refreshChat, 4000);
+function sampleUsage() {
+  if (!account || document.hidden) {
+    usageSample = null;
+    return;
+  }
+  const current = performance.now();
+  const elapsed = usageSample === null ? 0 : Math.floor(current - usageSample);
+  usageSample = current;
+  api('usage', {elapsed_ms: elapsed <= 15000 ? elapsed : 0}).catch(() => {});
+}
+document.addEventListener('visibilitychange', sampleUsage);
+window.setInterval(sampleUsage, 10000);
 byId('launch-hint').hidden = true;
 refreshSession();
 </script>

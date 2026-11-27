@@ -20,6 +20,7 @@ PAGE = ROOT.parent / "app/src/main/assets/index.html"
 COOKIE = "mood_session"
 LIFETIME = 30 * 24 * 3600
 MAX_BODY = 32768
+MAX_USAGE_INTERVAL_MS = 15000
 KDF_SLOTS = BoundedSemaphore(2)
 ATTEMPTS = {}
 ATTEMPT_LOCK = Lock()
@@ -259,6 +260,19 @@ class Handler(BaseHTTPRequestHandler):
                 raise APIError(400, "Неизвестное действие.")
             audit(db, uid, action)
             return {"ok": True}, None
+        if method == "POST" and path == "/api/usage":
+            elapsed = data.get("elapsed_ms")
+            if type(elapsed) is not int or not 0 <= elapsed <= MAX_USAGE_INTERVAL_MS:
+                raise APIError(400, "Некорректный интервал активности.")
+            current = time.time_ns() // 1_000_000
+            db.execute(
+                """INSERT INTO usage_time(user_id,total_ms,last_seen_ms) VALUES (?,0,?)
+                   ON CONFLICT(user_id) DO UPDATE SET
+                       total_ms=total_ms+min(?,max(0,excluded.last_seen_ms-last_seen_ms)),
+                       last_seen_ms=max(last_seen_ms,excluded.last_seen_ms)""",
+                (uid, current, elapsed),
+            )
+            return {"ok": True}, None
         if method == "POST" and path == "/api/score":
             values, day = data.get("answers"), field(data, "date", 10)
             if not isinstance(values, list) or len(values) != 7 or any(
@@ -322,7 +336,10 @@ class Handler(BaseHTTPRequestHandler):
                     raise APIError(404, "Пользователь не найден.")
                 if method == "GET" and not target[2]:
                     audit(db, uid, "admin_view_user")
+                    usage = db.execute("SELECT total_ms FROM usage_time WHERE user_id=?", (target_id,)).fetchone()
                     return {"user": dict(profile), "messages": messages(db, target_id),
+                            "result": result(db, target_id),
+                            "usage_seconds": usage["total_ms"] // 1000 if usage else None,
                             "activity": rows(db, "SELECT action,created_at FROM activity WHERE user_id=? ORDER BY id DESC",
                                              (target_id,))}, None
                 if method == "POST" and target[2]:
