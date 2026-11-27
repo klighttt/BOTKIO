@@ -326,27 +326,19 @@ class Handler(BaseHTTPRequestHandler):
             if method == "GET" and path == "/api/admin/users":
                 audit(db, uid, "admin_view_users")
                 return {"users": rows(db, "SELECT id,login,created_at FROM users ORDER BY id")}, None
-            target = re.fullmatch(r"/api/admin/users/([0-9]{1,18})(/reply)?", path)
-            if target:
+            target = re.fullmatch(r"/api/admin/users/([0-9]{1,18})", path)
+            if method == "GET" and target:
                 target_id = int(target[1])
                 profile = db.execute(
                     "SELECT id,login,created_at,last_login FROM users WHERE id=?",
                     (target_id,)).fetchone()
                 if profile is None:
                     raise APIError(404, "Пользователь не найден.")
-                if method == "GET" and not target[2]:
-                    audit(db, uid, "admin_view_user")
-                    usage = db.execute("SELECT total_ms FROM usage_time WHERE user_id=?", (target_id,)).fetchone()
-                    return {"user": dict(profile), "messages": messages(db, target_id),
-                            "result": result(db, target_id),
-                            "usage_seconds": usage["total_ms"] // 1000 if usage else None,
-                            "activity": rows(db, "SELECT action,created_at FROM activity WHERE user_id=? ORDER BY id DESC",
-                                             (target_id,))}, None
-                if method == "POST" and target[2]:
-                    message = add_message(db, target_id, field(data, "text", 4000), "support")
-                    audit(db, uid, "admin_reply")
-                    audit(db, target_id, "receive_support_reply")
-                    return {"message": message}, None
+                audit(db, uid, "admin_view_user")
+                usage = db.execute("SELECT total_ms FROM usage_time WHERE user_id=?", (target_id,)).fetchone()
+                return {"user": dict(profile), "messages": messages(db, target_id),
+                        "result": result(db, target_id),
+                        "usage_seconds": usage["total_ms"] // 1000 if usage else None}, None
         raise APIError(404, "Запрос не найден.")
 
     def json_response(self, status, payload, cookie=None):

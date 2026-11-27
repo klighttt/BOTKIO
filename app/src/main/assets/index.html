@@ -171,12 +171,17 @@ progress{margin-bottom:19px;height:6px}
 .new-form input,.new-form textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--pale);color:inherit;font:inherit}
 .new-form textarea{resize:vertical}
 .status{color:var(--muted);min-height:1.45em;margin-top:8px}
-#dialog,#admin-dialog,#admin-events,#admin-users{padding:0;list-style:none}
+#dialog,#admin-dialog,#admin-users{padding:0;list-style:none}
 .message{margin:8px 0;padding:9px 12px;border:1px solid var(--line);border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere}
 .message[data-sender=user]{background:var(--selected)}
-.message time,#admin-users small,#admin-events time{display:block;color:var(--muted);font-size:.82rem}
+.message time,#admin-users small{display:block;color:var(--muted);font-size:.82rem}
 #admin-users button{width:100%;margin:4px 0;text-align:left;overflow-wrap:anywhere}
-#admin-profile{overflow-wrap:anywhere}
+#admin-profile{margin:16px 0 8px;overflow-wrap:anywhere}
+.admin-facts{margin:0 0 20px}
+.admin-facts div{padding:8px 0;border-bottom:1px solid var(--line)}
+.admin-facts dt{color:var(--muted);font-size:.82rem}
+.admin-facts dd{margin:2px 0 0;font-variant-numeric:tabular-nums}
+#admin-note{margin:4px 0 16px}
 .logout{margin:12px 0 0}
 </style>
 </head>
@@ -214,8 +219,11 @@ progress{margin-bottom:19px;height:6px}
     <div id="admin-detail" hidden>
       <button id="admin-back" class="outline" type="button">К списку пользователей</button>
       <h2 id="admin-profile"></h2>
-      <p id="admin-dates" class="intro"></p>
-      <p id="admin-usage" class="intro"></p>
+      <dl class="admin-facts">
+        <div><dt>Регистрация</dt><dd id="admin-created"></dd></div>
+        <div><dt>Последний вход</dt><dd id="admin-last-login"></dd></div>
+        <div><dt>Время в приложении</dt><dd id="admin-usage"></dd></div>
+      </dl>
       <div id="admin-mood" class="result-hero" hidden>
         <h2>Настроение пользователя</h2>
         <time class="result-date" id="admin-result-date"></time>
@@ -231,12 +239,6 @@ progress{margin-bottom:19px;height:6px}
       <p id="admin-note" class="history-note"></p>
       <h2>История чата</h2>
       <ul id="admin-dialog"></ul>
-      <form id="reply-form" class="new-form">
-        <textarea id="reply-text" aria-label="Ответ поддержки" rows="3" maxlength="4000" required></textarea>
-        <button class="primary">Ответить</button>
-      </form>
-      <h2>Активность</h2>
-      <ul id="admin-events"></ul>
     </div>
   </section>
   <section id="survey" aria-labelledby="question" hidden>
@@ -464,8 +466,8 @@ function resetAccount() {
   usageSample = null;
   answers.fill(null);
   currentQuestion = 0;
-  for (const id of ['note', 'support-text', 'reply-text', 'password']) byId(id).value = '';
-  for (const id of ['dialog', 'admin-dialog', 'admin-events', 'admin-users', 'history-list']) byId(id).replaceChildren();
+  for (const id of ['note', 'support-text', 'password']) byId(id).value = '';
+  for (const id of ['dialog', 'admin-dialog', 'admin-users', 'history-list']) byId(id).replaceChildren();
   for (const id of ['note-status', 'support-status', 'admin-status', 'profile-login']) byId(id).textContent = '';
   byId('settings-message').hidden = true;
   byId('save-message').hidden = true;
@@ -841,59 +843,28 @@ async function showUsers() {
   } catch (error) { if (epoch === accountEpoch) adminError(error); }
 }
 
-const activityLabels = {
-  register:'Регистрация', login:'Вход', logout:'Выход', login_failed:'Неудачная попытка входа',
-  open_home:'Главная', open_settings:'Настройки', open_history:'История', open_profile:'Профиль', open_support:'Поддержка',
-  answer_question:'Выбран ответ', previous_question:'Предыдущий вопрос', complete_survey:'Опрос завершён',
-  save_note:'Заметка сохранена', clear_note:'Заметка очищена', change_style:'Стиль изменён',
-  send_message:'Сообщение в поддержку', receive_support_reply:'Ответ поддержки получен',
-  admin_denied:'Доступ к админ-панели отклонён', admin_open:'Админ-панель открыта',
-  admin_granted:'Роль назначена', admin_revoked:'Роль отозвана',
-  admin_view_users:'Просмотр списка пользователей', admin_view_user:'Просмотр пользователя', admin_reply:'Ответ пользователю'
-};
-
 async function showUser(id) {
-  if (targetId !== id) byId('reply-text').value = '';
   targetId = id;
   const epoch = accountEpoch;
   try {
     const profile = await api('admin/users/' + id);
     if (epoch !== accountEpoch || targetId !== id || screen !== 'admin') return;
-    const {user, messages, activity} = profile;
+    const {user, messages} = profile;
     byId('admin-profile').textContent = user.login + ' · ID ' + user.id;
-    byId('admin-dates').textContent = 'Регистрация: ' + dateTime(user.created_at) + ' · Последний вход: ' + dateTime(user.last_login);
+    byId('admin-created').textContent = dateTime(user.created_at);
+    byId('admin-last-login').textContent = dateTime(user.last_login);
     byId('admin-mood').hidden = !profile.result;
     byId('admin-no-result').hidden = Boolean(profile.result);
     if (profile.result) fillMoodCard(profile.result, 'admin-');
     byId('admin-note').textContent = profile.result?.note || 'Заметки пока нет.';
     const seconds = profile.usage_seconds;
-    byId('admin-usage').textContent = 'Время в приложении: ' + (seconds == null ? 'нет данных' :
-      Math.floor(seconds / 3600) + ' ч ' + Math.floor(seconds / 60) % 60 + ' мин ' + seconds % 60 + ' с');
+    byId('admin-usage').textContent = seconds == null ? 'Нет данных' :
+      Math.floor(seconds / 3600) + ' ч ' + Math.floor(seconds / 60) % 60 + ' мин ' + seconds % 60 + ' с';
     drawMessages('admin-dialog', messages);
-    byId('admin-events').replaceChildren(...activity.map(event => {
-      const li = document.createElement('li');
-      const time = document.createElement('time');
-      li.textContent = activityLabels[event.action] || event.action;
-      time.textContent = dateTime(event.created_at);
-      li.append(time);
-      return li;
-    }));
     byId('admin-users').hidden = true;
     byId('admin-detail').hidden = false;
   } catch (error) { if (epoch === accountEpoch) adminError(error); }
 }
-
-bindForm('reply-form', async epoch => {
-  const id = targetId;
-  if (id === null) return;
-  try {
-    await api('admin/users/' + id + '/reply', {text:byId('reply-text').value});
-    if (epoch === accountEpoch && screen === 'admin' && targetId === id) {
-      byId('reply-text').value = '';
-      await showUser(id);
-    }
-  } catch (error) { if (epoch === accountEpoch) adminError(error); }
-});
 
 byId('open-admin').onclick = showUsers;
 byId('admin-back').onclick = showUsers;
