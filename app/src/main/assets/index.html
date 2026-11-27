@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Дневник настроения</title>
+<style>
+html{font:16px/1.45 system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--background)}
+:root{--background:#eaf1ea;--accent:#20553e;--ink:#192c25;--muted:#496257;--line:#cbd9ce;--surface:#fffefa;--pale:#edf4eb;--mark:#d9e9d7;--track:#e4eee2;--progress:#42785a;--selected:#e7f1e5;--selected-border:#5d8d6c;--hover:#e5eee3;--active:#16432e;--disabled:#e5ece3;--focus:#84540b;--shadow:#244c2a13}
+:root[data-style="lilac"]{--background:#eee9f8;--accent:#5e3e85;--ink:#251a37;--muted:#57486d;--line:#dbd0e9;--surface:#fffaff;--pale:#f3ebfc;--mark:#e9d9f6;--track:#e9def4;--progress:#8a65b6;--selected:#f0e3fc;--selected-border:#9c77bf;--hover:#f0e7f9;--active:#49306c;--disabled:#ece5f4;--focus:#69328c;--shadow:#43295714}
+*{box-sizing:border-box}
+body{margin:0;min-inline-size:0;padding:24px 14px 30px}
+button,input{font:inherit}
+[hidden]{display:none!important}
+.shell{max-inline-size:495px;margin:auto;border:1px solid var(--line);border-radius:24px;background:var(--surface);box-shadow:0 15px 55px var(--shadow);overflow:hidden}
+header{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:15px 20px;border-bottom:1px solid var(--line)}
+.brand{font-weight:750;display:flex;gap:8px;align-items:center}
+.brand-mark{height:26px;width:26px;border-radius:100%;color:var(--accent);background:var(--mark);display:grid;place-items:center;font-weight:700;flex:none}
+main{padding:19px 20px 24px}
+body.has-navigation{padding-bottom:calc(100px + env(safe-area-inset-bottom, 0px))}
+.tabs{
+  position:fixed;z-index:2;inset-inline:0;bottom:calc(12px + env(safe-area-inset-bottom, 0px));
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;
+  inline-size:min(467px,calc(100% - 20px));margin-inline:auto;padding:5px;
+  border:1px solid var(--glass-edge);border-radius:23px;
+  background:var(--surface);
+  box-shadow:0 7px 24px #201c3c24,inset 0 1px 1px #fff;
+}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .tabs{
+    background:linear-gradient(155deg,#ffffffb3,#ffffff20 58%),var(--glass-tint);
+    -webkit-backdrop-filter:blur(16px) saturate(150%);
+    backdrop-filter:blur(16px) saturate(150%);
+  }
+}
+:root{--glass-tint:#e2f1e0ba;--glass-edge:#fcfff6df;--glass-selected:#cfe2d2d9}
+:root[data-style="lilac"]{--glass-tint:#eddef9ba;--glass-edge:#fff5ffec;--glass-selected:#e8d5f9df}
+.tabs button{
+  min-width:0;min-height:54px;padding:5px 1px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  border-radius:17px;font-size:.78rem;line-height:1.25;
+}
+.tabs svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tabs [aria-current="page"]{
+  color:var(--accent);background:var(--glass-selected);border-color:var(--glass-edge);
+  box-shadow:inset 0 1px 2px #fff9,0 2px 6px var(--shadow);
+}
+.style-options{gap:10px;margin-top:14px}
+.style-option{display:grid;grid-template-columns:auto 34px minmax(0,1fr);gap:11px;align-items:center}
+.style-option strong,.style-option small{display:block}
+.style-option small{color:var(--muted);font-weight:400}
+.swatch{width:31px;height:25px;border-radius:7px;border:1px solid #0002}
+.swatch-green{background:linear-gradient(90deg,#d9e9d7 50%,#20553e 50%)}
+.swatch-lilac{background:linear-gradient(90deg,#e9d9f6 50%,#5e3e85 50%)}
+#save-message,#settings-message{margin-bottom:12px;font-size:.88rem;color:var(--muted)}
+h1,h2,p{margin:0}
+h1{font-size:clamp(1.55rem,5.8vw,2.05rem);line-height:1.14;letter-spacing:-.035em}
+h2{font-size:1.14rem;line-height:1.24}
+.meta,.intro,.score-scale,.advice p,.empty{color:var(--muted)}
+.meta{display:flex;justify-content:space-between;gap:8px;font-size:.86rem;font-weight:650}
+progress{display:block;width:100%;height:7px;margin:9px 0 22px;border:0;border-radius:9px;overflow:hidden;background:var(--track);appearance:none}
+progress::-webkit-progress-bar{background:var(--track)}
+progress::-webkit-progress-value{background:var(--progress);border-radius:9px}
+progress::-moz-progress-bar{background:var(--progress);border-radius:9px}
+.intro{margin-top:8px;font-size:.92rem}
+fieldset{border:0;padding:0;margin:18px 0;display:grid;gap:8px;min-inline-size:0}
+.option{display:flex;gap:11px;align-items:center;min-height:47px;padding:7px 12px;border:1px solid var(--line);border-radius:12px;cursor:pointer}
+.option:has(input:checked){background:var(--selected);border-color:var(--selected-border);font-weight:650}
+.option input{margin:0;width:17px;height:17px;accent-color:var(--accent);flex:none}
+.actions{display:flex;gap:10px}
+button{appearance:none;min-height:44px;border:1px solid transparent;border-radius:12px;padding:9px 13px;color:inherit;font-weight:650;background:transparent;cursor:pointer}
+button:hover:not(:disabled){background:var(--hover)}
+.primary{background:var(--accent);color:#fff;flex:1}
+.primary:hover:not(:disabled){background:var(--active)}
+.primary:disabled{background:var(--disabled);color:var(--muted);cursor:default}
+.outline{border-color:var(--line)}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.result-hero{text-align:center;background:var(--pale);border-radius:18px;padding:19px 13px 17px;margin-bottom:20px}
+.face{font-size:58px;line-height:1.05;margin:9px 0}
+.score{font-weight:800;font-size:2.45rem;line-height:1;letter-spacing:-.06em}
+.score-scale{font-size:1rem;letter-spacing:0;font-weight:600}
+.mood-label{margin-top:8px;font-weight:650}
+.advice{margin:11px 0 17px;padding:0;list-style:none;display:grid;gap:8px}
+.advice li{padding:10px 12px;border:1px solid var(--line);border-radius:12px}
+.advice strong{display:block;margin-bottom:2px}
+.advice p{font-size:.91rem}
+.history-list{list-style:none;padding:0;margin:13px 0}
+.history-list li{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+.empty{margin:12px 0 18px}
+.launch-hint{padding:12px 14px;border:1px solid #a9bea9;background:#edf4eb;border-radius:12px;color:#234637}
+@media(max-width:350px){body{padding:9px 6px}header,main{padding-inline:13px}.brand{font-size:.92rem}}
+/* Screen surfaces and typography */
+:root{color-scheme:light;--ambient:#d8eadc;--hero-deep:#dbeadf;--hero-light:#f6faf1;--ring:#acc7b7;--edge:#fff9;--ink-soft:#335645}
+:root[data-style=lilac]{--ambient:#e7dafa;--hero-deep:#e8daf7;--hero-light:#fff6fb;--ring:#c9b3de;--ink-soft:#593e70}
+:root[data-style=night]{
+ color-scheme:dark;--background:#141b24;--surface:#1f2935;--ink:#f5f7fa;--muted:#bac6d6;--accent:#a6d8bc;
+ --line:#425164;--pale:#273644;--mark:#344b49;--hover:#354659;--track:#344355;--progress:#9bd1b4;
+ --selected:#2d4744;--selected-border:#92c8aa;--active:#c2eed5;--disabled:#293748;--focus:#e7bb74;
+ --shadow:#0005;--ambient:#283b48;--hero-deep:#2d494b;--hero-light:#22313d;--ring:#536e73;
+ --glass-tint:#243440e6;--glass-edge:#79949680;--glass-selected:#36534f;--edge:#ffffff26;--ink-soft:#c0e2d3
+}
+html{background:radial-gradient(ellipse at 50% 0%,var(--ambient),transparent 710px),var(--background);min-height:100%}
+body{padding-top:16px}
+.shell{background:transparent;border:none;box-shadow:none;overflow:visible}
+header{padding:6px 5px 16px;border-bottom:0}
+.brand{gap:10px;font-size:.9rem;letter-spacing:.015em;color:var(--ink-soft)}
+.brand-mark{height:35px;width:35px;border:1px solid var(--edge)}
+.brand-mark svg{width:21px;fill:none;stroke:currentColor;stroke-width:1.55;stroke-linecap:round}
+main{padding:0}
+.screen-card,#survey,#settings,#history,#unavailable{
+ padding:clamp(14px,4.5vw,22px);border:1px solid var(--line);border-radius:24px;
+ background:var(--surface);box-shadow:0 8px 24px var(--shadow)
+}
+h1{letter-spacing:-.045em}
+h1[tabindex="-1"]:focus{outline:none}
+.meta{align-items:center;color:var(--ink-soft);letter-spacing:.015em}
+progress{margin-bottom:19px;height:6px}
+.option{min-height:48px;border-radius:14px;padding-inline:12px}
+#options .option:focus-within{outline:2px solid var(--focus);outline-offset:2px}
+.primary{border-radius:14px;min-height:46px}
+:root[data-style=night] .primary{color:#172b24}
+:root[data-style=night] .primary:disabled{color:var(--muted)}
+.result-hero{
+ display:grid;justify-items:center;position:relative;isolation:isolate;overflow:hidden;text-align:center;
+ padding:17px 12px 20px;border-radius:28px;border:1px solid var(--edge);margin-bottom:18px;
+ background:radial-gradient(ellipse at 50% 49%,var(--hero-light),transparent 64%),linear-gradient(140deg,var(--hero-light),var(--hero-deep));
+ box-shadow:0 10px 27px var(--shadow),inset 0 1px 1px var(--edge);
+}
+.result-hero::before{
+ content:"";position:absolute;z-index:-1;inset:-35% -10% 15%;transform:rotate(-17deg);
+ background:repeating-radial-gradient(ellipse at center,transparent 0 20px,var(--edge) 21px 22px,transparent 23px 39px);
+ opacity:.55;pointer-events:none
+}
+.result-hero h1{font-size:clamp(1.65rem,6vw,2.25rem)}
+.result-date{margin:4px 0 12px;color:var(--ink-soft);font-size:.83rem}
+.mood-orbit{position:relative;width:112px;height:112px;display:grid;place-items:center;margin:0 0 11px}
+.mood-orbit svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg);fill:none;stroke-width:4;stroke-linecap:round}
+.orbit-track{stroke:var(--ring)}
+.orbit-fill{stroke:var(--accent)}
+.face{display:grid;place-items:center;width:87px;height:87px;margin:0;border-radius:50%;border:1px solid var(--edge);background:var(--hero-light);font-size:48px}
+.score{display:flex;align-items:baseline;gap:5px;font-size:3.05rem}
+.mood-label{background:var(--selected);color:var(--ink);border:1px solid var(--edge);border-radius:999px;padding:4px 11px;font-size:.88rem}
+.advice-block{margin:0 0 14px}
+.advice{margin-bottom:0}
+.advice li{position:relative;padding:10px 11px 10px 42px;background:var(--surface)}
+.advice li:first-child{background:var(--pale);border-color:var(--selected-border)}
+.tip-icon{position:absolute;left:9px;top:10px;background:var(--mark);color:var(--ink-soft);border-radius:50%;width:24px;height:24px;display:grid;place-items:center;font-weight:700}
+.note details{margin:0}
+.note summary{cursor:pointer;font-weight:700;min-height:32px}
+.note p{font-size:.88rem;color:var(--muted);margin:6px 0 10px}
+.note textarea{display:block;width:100%;min-height:86px;resize:vertical;font:inherit;color:inherit;background:var(--pale);border:1px solid var(--line);border-radius:12px;padding:9px}
+.note button{margin-top:9px}
+.note .status{margin:7px 0 0}
+.history-list li{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center}
+.history-list time,.history-note{display:block;color:var(--muted);font-size:.85rem}
+.history-note{grid-column:2/-1;overflow-wrap:anywhere;white-space:pre-wrap}
+.history-face{display:grid;place-items:center;width:38px;height:38px;border-radius:13px;background:var(--pale);font-size:23px}
+.history-score{padding:4px 8px;border-radius:10px;background:var(--pale);color:var(--ink);white-space:nowrap;font-size:.9rem}
+.swatch-night{background:linear-gradient(90deg,#263747 50%,#a6d8bc 50%)}
+:root[data-style=night] .tabs{box-shadow:0 7px 24px #0007,inset 0 1px 1px #fff3}
+:root[data-style=night] .tabs [aria-current="page"]{box-shadow:inset 0 1px 2px #fff3}
+@supports (backdrop-filter:blur(1px)){
+ :root[data-style=night] .tabs{background:linear-gradient(150deg,#ffffff26,transparent 55%),var(--glass-tint)}
+}
+@media(max-width:350px){header{padding-inline:5px}main{padding-inline:0}}
+#account,#support,#admin{padding:clamp(14px,4.5vw,22px);border:1px solid var(--line);border-radius:24px;background:var(--surface)}
+.tabs.has-admin{grid-template-columns:repeat(5,minmax(0,1fr))}
+.tabs.has-admin button{font-size:clamp(.65rem,2.8vw,.78rem)}
+.new-form{display:grid;gap:9px;margin-top:14px}
+.new-form input,.new-form textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--pale);color:inherit;font:inherit}
+.new-form textarea{resize:vertical}
+.status{color:var(--muted);min-height:1.45em;margin-top:8px}
+#dialog,#admin-dialog,#admin-events,#admin-users{padding:0;list-style:none}
+.message{margin:8px 0;padding:9px 12px;border:1px solid var(--line);border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.message[data-sender=user]{background:var(--selected)}
+.message time,#admin-users small,#admin-events time{display:block;color:var(--muted);font-size:.82rem}
+#admin-users button{width:100%;margin:4px 0;text-align:left;overflow-wrap:anywhere}
+#admin-profile{overflow-wrap:anywhere}
+.logout{margin:12px 0 0}
+</style>
+</head>
+<body>
+<div class="shell">
+<header>
+  <span class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 16c2.5 0 2.5-8 5-8s2.5 8 5 8 2.5-8 5-8c1.5 0 2 2.5 3 4"/></svg></span>Дневник настроения</span>
+  <button id="logout" class="outline" type="button" hidden>Выйти</button>
+</header>
+<main>
+  <p id="launch-hint" class="launch-hint">Откройте приложение или страницу сервера с включённым JavaScript.</p>
+  <section id="account" aria-labelledby="account-title" hidden>
+    <h1 id="account-title" tabindex="-1">Вход</h1>
+    <form id="auth-form" class="new-form">
+      <label>Логин <input id="login" name="login" maxlength="40" autocomplete="username" required></label>
+      <label>Пароль <input id="password" name="password" type="password" autocomplete="current-password" minlength="6" maxlength="256" required></label>
+      <button id="auth-submit" class="primary" type="submit">Войти</button>
+      <button id="auth-switch" class="outline" type="button">Создать аккаунт</button>
+    </form>
+    <p id="auth-status" class="status" role="status"></p>
+  </section>
+  <section id="support" aria-labelledby="support-title" hidden>
+    <h1 id="support-title" tabindex="-1">Поддержка</h1>
+    <ul id="dialog"></ul>
+    <form id="support-form" class="new-form">
+      <textarea id="support-text" aria-label="Сообщение в поддержку" maxlength="4000" rows="3" required></textarea>
+      <button class="primary">Отправить</button>
+    </form>
+    <p id="support-status" class="status" role="status"></p>
+  </section>
+  <section id="admin" aria-labelledby="admin-title" hidden>
+    <h1 id="admin-title" tabindex="-1">Админ</h1>
+    <p id="admin-status" class="status" role="status"></p>
+    <ul id="admin-users"></ul>
+    <div id="admin-detail" hidden>
+      <button id="admin-back" class="outline" type="button">К списку пользователей</button>
+      <h2 id="admin-profile"></h2>
+      <p id="admin-dates" class="intro"></p>
+      <h2>История чата</h2>
+      <ul id="admin-dialog"></ul>
+      <form id="reply-form" class="new-form">
+        <textarea id="reply-text" aria-label="Ответ поддержки" rows="3" maxlength="4000" required></textarea>
+        <button class="primary">Ответить</button>
+      </form>
+      <h2>Активность</h2>
+      <ul id="admin-events"></ul>
+    </div>
+  </section>
+  <section id="survey" aria-labelledby="question" hidden>
+    <div class="meta"><span id="step">Вопрос 1 из 7</span></div>
+    <progress id="progress" max="7" value="1" aria-label="Ход опроса"></progress>
+    <h1 id="question" tabindex="-1">Насколько тебе сейчас радостно?</h1>
+    <p class="intro">Выбери, насколько это описывает твоё состояние сейчас.</p>
+    <form id="form">
+      <p id="save-message" role="status" hidden>Результат пока не сохранился. Проверь, доступно ли хранилище, и нажми «Показать результат» ещё раз.</p>
+      <fieldset id="options" aria-labelledby="question">
+        <label class="option"><input type="radio" name="answer" value="0">Совсем нет</label>
+        <label class="option"><input type="radio" name="answer" value="1">Немного</label>
+        <label class="option"><input type="radio" name="answer" value="2">Умеренно</label>
+        <label class="option"><input type="radio" name="answer" value="3">Сильно</label>
+        <label class="option"><input type="radio" name="answer" value="4">Очень сильно</label>
+      </fieldset>
+      <div class="actions">
+        <button type="button" id="previous" class="outline" hidden>Назад</button>
+        <button type="submit" id="next" class="primary" disabled>Далее</button>
+      </div>
+    </form>
+  </section>
+  <section id="home" aria-labelledby="home-title" hidden>
+    <div class="result-hero">
+      <h1 id="home-title" tabindex="-1">Твоё настроение</h1>
+      <time class="result-date" id="result-date"></time>
+      <div class="mood-orbit" aria-hidden="true">
+        <svg viewBox="0 0 112 112"><circle class="orbit-track" cx="56" cy="56" r="51"/><circle class="orbit-fill" id="score-ring" cx="56" cy="56" r="51" pathLength="100"/></svg>
+        <div class="face" id="face"></div>
+      </div>
+      <p class="score"><span id="score"></span><span class="score-scale"> / 10</span></p>
+      <p class="mood-label" id="mood-label"></p>
+    </div>
+    <div class="screen-card advice-block">
+      <h2>Что можно сделать сейчас</h2>
+      <ul class="advice" id="advice"></ul>
+    </div>
+    <div class="screen-card note">
+      <details>
+        <summary>Личная заметка</summary>
+        <p>Что повлияло на твоё настроение? Заметка сохранится в твоём аккаунте.</p>
+        <form id="note-form">
+          <textarea id="note" aria-label="Личная заметка" maxlength="500" rows="3" placeholder="Например, удалось закончить важное дело"></textarea>
+          <button class="primary" type="submit">Сохранить заметку</button>
+          <p id="note-status" class="status" role="status"></p>
+        </form>
+      </details>
+    </div>
+
+  </section>
+  <section id="settings" aria-labelledby="settings-title" hidden>
+    <h1 id="settings-title" tabindex="-1">Настройки</h1>
+    <fieldset class="style-options">
+      <legend>Стили</legend>
+      <label class="option style-option">
+        <input type="radio" name="style" value="green" checked>
+        <span class="swatch swatch-green" aria-hidden="true"></span>
+        <span><strong>Зелёный</strong><small>Мягкие зелёные оттенки</small></span>
+      </label>
+      <label class="option style-option">
+        <input type="radio" name="style" value="lilac">
+        <span class="swatch swatch-lilac" aria-hidden="true"></span>
+        <span><strong>Сиреневый</strong><small>Светлые лавандовые оттенки</small></span>
+      </label>
+      <label class="option style-option">
+        <input type="radio" name="style" value="night">
+        <span class="swatch swatch-night" aria-hidden="true"></span>
+        <span><strong>Ночной</strong><small>Тёмное оформление</small></span>
+      </label>
+    </fieldset>
+    <p id="settings-message" role="status" hidden>Стиль применён, но его не удалось сохранить для следующего запуска.</p>
+  </section>
+  <section id="unavailable" aria-labelledby="unavailable-title" hidden>
+    <h1 id="unavailable-title" tabindex="-1">Сервер недоступен</h1>
+    <p class="empty">Не удалось получить данные аккаунта. Проверьте, что сервер запущен, и повторите попытку.</p>
+    <button type="button" id="retry-storage" class="outline">Повторить проверку</button>
+  </section>
+  <section id="history" aria-labelledby="history-title" hidden>
+    <h1 id="history-title" tabindex="-1">История настроения</h1>
+    <p class="intro">Сохранённый результат этого аккаунта.</p>
+    <p id="empty-history" class="empty" hidden></p>
+    <ul class="history-list" id="history-list"></ul>
+  </section>
+</main>
+<nav class="tabs" id="tabs" aria-label="Разделы приложения" hidden>
+  <button type="button" id="open-main" aria-controls="home">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10H3zM9 20v-6h6v6"/></svg>
+    Главная
+  </button>
+  <button type="button" id="open-settings" aria-controls="settings">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h7m4 0h5M4 12h2m4 0h10M4 18h11m4 0h1"/><circle cx="13" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+    Настройки
+  </button>
+  <button type="button" id="open-admin" aria-controls="admin" hidden><span aria-hidden="true">⚙</span>Админ</button>
+  <button type="button" id="open-history" aria-controls="history">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg>
+    История
+  </button>
+  <button type="button" id="open-support" aria-controls="support">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H9l-5 4zM8 9h8m-8 4h5"/></svg>
+    Поддержка
+  </button>
+</nav>
+</div>
+<script>
+'use strict';
+
+const questions = [
+  {text: 'Насколько тебе сейчас радостно?', reverse: false},
+  {text: 'Насколько тебе сейчас грустно?', reverse: true},
+  {text: 'Насколько тебе сейчас спокойно?', reverse: false},
+  {text: 'Насколько ты сейчас раздражён?', reverse: true},
+  {text: 'Насколько тебе сейчас интересно то, чем ты занимаешься?', reverse: false},
+  {text: 'Насколько тебя сейчас тяготят переживания?', reverse: true},
+  {text: 'Насколько тебе сейчас приятно то, что происходит вокруг?', reverse: false}
+];
+
+const moods = [
+  {max: 2, face: '😞', label: 'Очень низкое настроение', advice: [
+    ['Выбери одно простое действие', 'Выпей воды, умойся или на минуту открой окно. Выбери то, что сейчас легче всего.'],
+    ['Напиши близкому человеку', 'Можно начать с короткого сообщения: «У меня непростой день. Можешь немного поговорить?»'],
+    ["Сделай короткую паузу", "Отложи ближайшее дело на две минуты и устройся поудобнее."],
+    ["Попроси о конкретной помощи", "Выбери одно дело, с которым можно попросить помочь."],
+    ["Освободи себе немного времени", "Перенеси одну необязательную задачу, если можешь."]
+  ]},
+  {max: 4, face: '🙁', label: 'Пониженное настроение', advice: [
+    ['Смени обстановку на несколько минут', 'Если удобно, выйди на короткую прогулку или посиди у окна.'],
+    ['Включи знакомую музыку', 'Выбери одну песню, которую тебе приятно слушать, и сделай небольшую паузу.'],
+    ["Разбей дело на маленькие шаги", "Начни с самого короткого действия и реши, есть ли силы продолжить."],
+    ["Запиши, что сейчас мешает", "Достаточно одной фразы. Затем выбери, что в этой ситуации зависит от тебя."],
+    ["Дай себе передышку от экрана", "Отложи телефон ненадолго и посмотри в окно или потянись."]
+  ]},
+  {max: 6, face: '😐', label: 'Нейтральное настроение', advice: [
+    ['Добавь что-то приятное', 'Налей любимый напиток или удели десять минут занятию, которое тебе нравится.'],
+    ['Заметь хорошую деталь', 'Вспомни один момент сегодняшнего дня, к которому приятно вернуться.'],
+    ["Запланируй короткую прогулку", "Выбери знакомый маршрут и время, когда тебе будет удобно."],
+    ["Займись чем-то руками", "Попробуй порисовать, приготовить перекус или разобрать одну небольшую полку."],
+    ["Поменяй одну деталь дня", "Попробуй новый маршрут, плейлист или рецепт."]
+  ]},
+  {max: 8, face: '🙂', label: 'Хорошее настроение', advice: [
+    ['Повтори приятный момент', 'Вспомни, что сегодня тебя порадовало, и подумай, когда сможешь сделать это снова.'],
+    ['Поделись чем-нибудь хорошим', 'Расскажи близкому человеку о маленьком событии, которое сделало день лучше.'],
+    ["Назначь небольшую встречу", "Предложи знакомому прогуляться или выпить чаю в удобное время."],
+    ["Выдели время на увлечение", "Оставь пятнадцать минут на занятие, которого ждёшь."],
+    ["Устрой перерыв до усталости", "Сделай паузу между делами, пока у тебя ещё есть силы."]
+  ]},
+  {max: 10, face: '😄', label: 'Очень хорошее настроение', advice: [
+    ['Сохрани воспоминание', 'Запиши одну фразу о том, что сегодня порадовало. К ней можно вернуться позже.'],
+    ['Найди время для любимого занятия', 'Выбери то, что хочется сделать сегодня, и оставь на это немного времени.'],
+    ["Отметь маленькое достижение", "Вспомни одну вещь, которая сегодня получилась, и порадуйся ей."],
+    ["Сделай доброе дело", "Отправь благодарность или предложи посильную помощь."],
+    ["Оставь приятный план на завтра", "Выбери одно небольшое занятие, которого будешь ждать."]
+  ]}
+];
+
+function calculateScore(answers) {
+  if (answers.length !== questions.length ||
+      Array.from(answers).some(value => !Number.isInteger(value) || value < 0 || value > 4)) {
+    throw new RangeError('Нужно семь ответов со значениями от 0 до 4.');
+  }
+  const total = answers.reduce((sum, value, index) =>
+    sum + (questions[index].reverse ? 4 - value : value), 0);
+  return Math.round(1 + 9 * total / (questions.length * 4));
+}
+
+function moodFor(score) {
+  return moods.find(mood => score <= mood.max);
+}
+
+function localDay(date = new Date()) {
+  const twoDigits = number => String(number).padStart(2, '0');
+  return [date.getFullYear(), twoDigits(date.getMonth() + 1), twoDigits(date.getDate())].join('-');
+}
+
+const byId = id => document.getElementById(id);
+const radios = Array.from(document.querySelectorAll('input[name="answer"]'));
+const styleInputs = Array.from(document.querySelectorAll('input[name="style"]'));
+const sections = {
+  account:'account-title', survey:'question', home:'home-title', settings:'settings-title',
+  history:'history-title', support:'support-title', admin:'admin-title', unavailable:'unavailable-title'
+};
+const dateFormatter = new Intl.DateTimeFormat('ru-RU', {day:'numeric', month:'long', year:'numeric', timeZone:'UTC'});
+let savedResult = null;
+let account = null;
+let registering = false;
+let targetId = null;
+let accountEpoch = 0;
+let chatBusy = false;
+let logoutBusy = false;
+
+function formatDate(date) {
+  const parsed = new Date(date + 'T12:00:00Z');
+  return Number.isNaN(parsed.valueOf()) ? date : dateFormatter.format(parsed);
+}
+
+function dateTime(value) {
+  return value ? new Date(value).toLocaleString('ru-RU') : '—';
+}
+
+async function api(path, data) {
+  const options = {credentials:'same-origin', signal:AbortSignal.timeout(20000)};
+  if (data !== undefined) {
+    options.method = 'POST';
+    options.headers = {'Content-Type':'application/json','X-Mood-Request':'1'};
+    options.body = JSON.stringify(data);
+  }
+  let response;
+  try { response = await fetch('/api/' + path, options); }
+  catch { throw new Error('Сервер недоступен. Попробуйте ещё раз.'); }
+  const value = await response.json();
+  if (!response.ok) {
+    const error = new Error(value.error);
+    error.status = response.status;
+    throw error;
+  }
+  return value;
+}
+
+function resetAccount() {
+  accountEpoch += 1;
+  account = savedResult = targetId = noteDay = null;
+  answers.fill(null);
+  currentQuestion = 0;
+  for (const id of ['note', 'support-text', 'reply-text', 'password']) byId(id).value = '';
+  for (const id of ['dialog', 'admin-dialog', 'admin-events', 'admin-users', 'history-list']) byId(id).replaceChildren();
+  for (const id of ['note-status', 'support-status', 'admin-status']) byId(id).textContent = '';
+  byId('settings-message').hidden = true;
+  byId('save-message').hidden = true;
+  byId('note').closest('details').open = false;
+  byId('admin-detail').hidden = true;
+  applyStyle('green');
+}
+
+function track(action) {
+  if (account) api('activity', {action}).catch(() => {});
+}
+
+async function refreshSession() {
+  try {
+    const state = await api('me');
+    resetAccount();
+    account = state.user;
+    savedResult = state.result ?? null;
+    if (account) {
+      applyStyle(account.style);
+      openMain();
+    } else showScreen('account');
+  } catch (error) {
+    showScreen('unavailable');
+  }
+}
+let screen = 'survey';
+let currentQuestion = 0;
+const answers = Array(questions.length).fill(null);
+
+function showScreen(name, moveFocus = true) {
+  screen = name;
+  for (const section of Object.keys(sections)) byId(section).hidden = section !== name;
+  const hasResult = account !== null && savedResult !== null;
+  const showAdmin = hasResult && account.admin;
+  byId('open-admin').hidden = !showAdmin;
+  byId('tabs').classList.toggle('has-admin', showAdmin);
+  byId('logout').hidden = account === null;
+  byId('tabs').hidden = !hasResult;
+  document.body.classList.toggle('has-navigation', hasResult);
+  for (const [id, target] of [['open-main', 'home'], ['open-settings', 'settings'], ['open-history', 'history'], ['open-support', 'support'], ['open-admin', 'admin']]) {
+    if (name === target) byId(id).setAttribute('aria-current', 'page');
+    else byId(id).removeAttribute('aria-current');
+  }
+  if (moveFocus) {
+    byId(sections[name]).focus({preventScroll: true});
+    window.scrollTo(0, 0);
+  }
+}
+
+function renderQuestion(moveFocus = true) {
+  byId('question').textContent = questions[currentQuestion].text;
+  byId('step').textContent = 'Вопрос ' + (currentQuestion + 1) + ' из ' + questions.length;
+  byId('progress').value = currentQuestion + 1;
+  for (const radio of radios) radio.checked = Number(radio.value) === answers[currentQuestion];
+  byId('previous').hidden = currentQuestion === 0;
+  byId('next').disabled = answers[currentQuestion] === null;
+  byId('next').textContent = currentQuestion === questions.length - 1 ? 'Показать результат' : 'Далее';
+  showScreen('survey', moveFocus);
+}
+
+function renderResult({date, score}, moveFocus = true) {
+  const mood = moodFor(score);
+  byId('result-date').dateTime = date;
+  byId('result-date').textContent = formatDate(date);
+  byId('score-ring').setAttribute('stroke-dasharray', String(score * 10) + ' 100');
+  byId('face').textContent = mood.face;
+  byId('score').textContent = score;
+  byId('mood-label').textContent = mood.label;
+  const items = mood.advice.map(([title, detail], index) => {
+    const item = document.createElement('li');
+    const heading = document.createElement('strong');
+    const paragraph = document.createElement('p');
+    heading.textContent = title;
+    paragraph.textContent = detail;
+    const icon = document.createElement('span');
+    icon.className = 'tip-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = index === 0 ? '✦' : '·';
+    item.append(icon, heading, paragraph);
+    return item;
+  });
+  byId('advice').replaceChildren(...items);
+  prepareNote();
+  showScreen('home', moveFocus);
+}
+
+async function completeSurvey() {
+  const epoch = accountEpoch;
+  const button = byId('next');
+  button.disabled = true;
+  byId('previous').disabled = true;
+  try {
+    const {result} = await api('score', {date:localDay(), answers:answers.slice()});
+    if (epoch !== accountEpoch) return;
+    savedResult = result;
+    byId('save-message').hidden = true;
+    renderResult(result);
+  } catch (error) {
+    if (epoch !== accountEpoch) return;
+    byId('save-message').textContent = error.message;
+    byId('save-message').hidden = false;
+  } finally {
+    byId('previous').disabled = false;
+    byId('next').disabled = answers[currentQuestion] === null;
+  }
+}
+
+function openMain(moveFocus = true) {
+  if (!account) showScreen('account', moveFocus);
+  else if (savedResult === null) renderQuestion(moveFocus);
+  else renderResult(savedResult, moveFocus);
+}
+
+function applyStyle(style) {
+  const selected = styleInputs.some(input => input.value === style) ? style : 'green';
+  document.documentElement.dataset.style = selected;
+  for (const input of styleInputs) input.checked = input.value === selected;
+}
+
+function showHistory() {
+  if (savedResult === null) return;
+  const rows = [savedResult].map(({date, score, note: savedNote}) => {
+    const mood = moodFor(score);
+    const row = document.createElement('li');
+    const icon = document.createElement('span');
+    const details = document.createElement('div');
+    const label = document.createElement('b');
+    const day = document.createElement('time');
+    const result = document.createElement('strong');
+    icon.className = 'history-face';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = mood.face;
+    label.textContent = mood.label;
+    day.dateTime = date;
+    day.textContent = formatDate(date);
+    result.className = 'history-score';
+    result.textContent = score + ' / 10';
+    details.append(label, day);
+    row.append(icon, details, result);
+    if (savedNote) {
+      const note = document.createElement('p');
+      note.className = 'history-note';
+      note.textContent = savedNote;
+      row.append(note);
+    }
+    return row;
+  });
+  byId('empty-history').hidden = true;
+  byId('history-list').replaceChildren(...rows);
+  showScreen('history');
+}
+
+byId('options').addEventListener('change', event => {
+  if (event.target.name !== 'answer') return;
+  answers[currentQuestion] = Number(event.target.value);
+  if (!surveyBusy) byId('next').disabled = false;
+  track('answer_question');
+});
+
+let surveyBusy = false;
+byId('form').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (surveyBusy || screen !== 'survey' || savedResult !== null || answers[currentQuestion] === null) return;
+  if (currentQuestion === questions.length - 1) {
+    surveyBusy = true;
+    try { await completeSurvey(); } finally { surveyBusy = false; }
+    return;
+  }
+  currentQuestion += 1;
+  renderQuestion();
+});
+
+byId('previous').addEventListener('click', () => {
+  if (surveyBusy || currentQuestion === 0) return;
+  track('previous_question');
+  currentQuestion -= 1;
+  byId('save-message').hidden = true;
+  renderQuestion();
+});
+
+let noteDay = null;
+function prepareNote() {
+  if (noteDay === savedResult.date) return;
+  byId('note').value = savedResult.note;
+  noteDay = savedResult.date;
+}
+
+function bindForm(id, handler) {
+  const form = byId(id);
+  const button = form.querySelector('button[type=submit],button:not([type])');
+  let busy = false;
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (busy) return;
+    busy = button.disabled = true;
+    try { await handler(accountEpoch); }
+    finally { busy = button.disabled = false; }
+  });
+}
+
+bindForm('note-form', async epoch => {
+  if (!savedResult) return;
+  try {
+    const {result} = await api('note', {note:byId('note').value});
+    if (epoch !== accountEpoch) return;
+    savedResult = result;
+    byId('note').value = result.note;
+    byId('note-status').textContent = result.note ? 'Заметка сохранена.' : 'Заметка очищена.';
+  } catch (error) {
+    if (epoch === accountEpoch) byId('note-status').textContent = error.message;
+  }
+});
+
+bindForm('auth-form', async () => {
+  byId('auth-status').textContent = '';
+  byId('auth-switch').disabled = true;
+  try {
+    await api(registering ? 'register' : 'login', {login: byId('login').value, password:byId('password').value});
+    byId('password').value = '';
+    await refreshSession();
+  } catch (error) { byId('auth-status').textContent = error.message; }
+  finally { byId('auth-switch').disabled = false; }
+});
+
+byId('auth-switch').onclick = () => {
+  registering = !registering;
+  byId('account-title').textContent = registering ? 'Регистрация' : 'Вход';
+  byId('auth-submit').textContent = registering ? 'Зарегистрироваться' : 'Войти';
+  byId('auth-switch').textContent = registering ? 'Уже есть аккаунт' : 'Создать аккаунт';
+  byId('password').autocomplete = registering ? 'new-password' : 'current-password';
+  byId('auth-status').textContent = '';
+};
+
+byId('logout').onclick = async () => {
+  if (logoutBusy) return;
+  logoutBusy = byId('logout').disabled = true;
+  try {
+    await api('logout', {}).catch(error => { if (error.status !== 401) throw error; });
+    resetAccount();
+    byId('auth-status').textContent = '';
+    showScreen('account');
+  } catch (error) { alert(error.message); }
+  finally { logoutBusy = byId('logout').disabled = false; }
+};
+
+byId('open-history').onclick = () => { track('open_history'); showHistory(); };
+byId('open-main').onclick = () => { track('open_home'); openMain(); };
+byId('open-settings').onclick = () => {
+  if (savedResult) { track('open_settings'); showScreen('settings'); }
+};
+byId('retry-storage').onclick = refreshSession;
+
+for (const input of styleInputs) {
+  input.onchange = async () => {
+    const epoch = accountEpoch;
+    styleInputs.forEach(item => { item.disabled = true; });
+    try {
+      const {style} = await api('style', {style:input.value});
+      if (epoch === accountEpoch) {
+        applyStyle(style);
+        account.style = style;
+        byId('settings-message').hidden = true;
+      }
+    } catch {
+      if (epoch === accountEpoch) {
+        applyStyle(account.style);
+        byId('settings-message').textContent = 'Не удалось сохранить стиль.';
+        byId('settings-message').hidden = false;
+      }
+    } finally { styleInputs.forEach(item => { item.disabled = false; }); }
+  };
+}
+
+function drawMessages(id, messages) {
+  const list = byId(id);
+  list.replaceChildren(...messages.map(message => {
+    const li = document.createElement('li');
+    const time = document.createElement('time');
+    const body = document.createElement('p');
+    li.className = 'message';
+    li.dataset.sender = message.sender;
+    time.textContent = (message.sender === 'support' ? 'Поддержка' : 'Пользователь') + ' · ' + dateTime(message.created_at);
+    body.textContent = message.text;
+    li.append(time, body);
+    return li;
+  }));
+  if (!messages.length) {
+    const li = document.createElement('li');
+    li.textContent = 'Сообщений пока нет.';
+    list.append(li);
+  }
+}
+
+async function refreshChat() {
+  if (screen !== 'support' || chatBusy) return;
+  const epoch = accountEpoch;
+  chatBusy = true;
+  try {
+    const {messages} = await api('messages');
+    if (epoch === accountEpoch && screen === 'support') drawMessages('dialog', messages);
+  } catch (error) {
+    if (epoch === accountEpoch && screen === 'support') byId('support-status').textContent = error.message;
+  } finally { chatBusy = false; }
+}
+
+byId('open-support').onclick = () => {
+  if (!savedResult) return;
+  track('open_support');
+  byId('support-status').textContent = '';
+  showScreen('support');
+  refreshChat();
+};
+
+bindForm('support-form', async epoch => {
+  const editor = byId('support-text');
+  try {
+    const output = await api('messages', {text:editor.value});
+    if (epoch !== accountEpoch) return;
+    editor.value = '';
+    byId('support-status').textContent = output.admin ? 'Вкладка «Админ» открыта.' : '';
+    if (output.admin) {
+      account.admin = true;
+      showScreen(screen, false);
+    }
+    await refreshChat();
+  } catch (error) {
+    if (epoch === accountEpoch) {
+      if (editor.value === '5051' && error.status === 403) editor.value = '';
+      byId('support-status').textContent = error.message;
+    }
+  }
+});
+
+function adminError(error) {
+  if (error.status === 403) {
+    account.admin = false;
+    showScreen('support');
+    byId('support-status').textContent = error.message;
+  } else byId('admin-status').textContent = error.message;
+}
+
+async function showUsers() {
+  if (!account?.admin) return;
+  const epoch = accountEpoch;
+  targetId = null;
+  byId('admin-users').hidden = false;
+  byId('admin-detail').hidden = true;
+  byId('admin-status').textContent = '';
+  showScreen('admin');
+  try {
+    const {users} = await api('admin/users');
+    if (epoch !== accountEpoch || screen !== 'admin' || targetId !== null) return;
+    byId('admin-users').replaceChildren(...users.map(user => {
+      const li = document.createElement('li');
+      const button = document.createElement('button');
+      const sub = document.createElement('small');
+      button.type = 'button';
+      button.className = 'outline';
+      button.textContent = user.login;
+      sub.textContent = dateTime(user.created_at);
+      button.append(sub);
+      button.onclick = () => showUser(user.id);
+      li.append(button);
+      return li;
+    }));
+  } catch (error) { if (epoch === accountEpoch) adminError(error); }
+}
+
+const activityLabels = {
+  register:'Регистрация', login:'Вход', logout:'Выход', login_failed:'Неудачная попытка входа',
+  open_home:'Главная', open_settings:'Настройки', open_history:'История', open_support:'Поддержка',
+  answer_question:'Выбран ответ', previous_question:'Предыдущий вопрос', complete_survey:'Опрос завершён',
+  save_note:'Заметка сохранена', clear_note:'Заметка очищена', change_style:'Стиль изменён',
+  send_message:'Сообщение в поддержку', receive_support_reply:'Ответ поддержки получен',
+  admin_denied:'Доступ к админ-панели отклонён', admin_open:'Админ-панель открыта',
+  admin_granted:'Роль назначена', admin_revoked:'Роль отозвана',
+  admin_view_users:'Просмотр списка пользователей', admin_view_user:'Просмотр пользователя', admin_reply:'Ответ пользователю'
+};
+
+async function showUser(id) {
+  if (targetId !== id) byId('reply-text').value = '';
+  targetId = id;
+  const epoch = accountEpoch;
+  try {
+    const profile = await api('admin/users/' + id);
+    if (epoch !== accountEpoch || targetId !== id || screen !== 'admin') return;
+    const {user, messages, activity} = profile;
+    byId('admin-profile').textContent = user.login + ' · ID ' + user.id;
+    byId('admin-dates').textContent = 'Регистрация: ' + dateTime(user.created_at) + ' · Последний вход: ' + dateTime(user.last_login);
+    drawMessages('admin-dialog', messages);
+    byId('admin-events').replaceChildren(...activity.map(event => {
+      const li = document.createElement('li');
+      const time = document.createElement('time');
+      li.textContent = activityLabels[event.action] || event.action;
+      time.textContent = dateTime(event.created_at);
+      li.append(time);
+      return li;
+    }));
+    byId('admin-users').hidden = true;
+    byId('admin-detail').hidden = false;
+  } catch (error) { if (epoch === accountEpoch) adminError(error); }
+}
+
+bindForm('reply-form', async epoch => {
+  const id = targetId;
+  if (id === null) return;
+  try {
+    await api('admin/users/' + id + '/reply', {text:byId('reply-text').value});
+    if (epoch === accountEpoch && screen === 'admin' && targetId === id) {
+      byId('reply-text').value = '';
+      await showUser(id);
+    }
+  } catch (error) { if (epoch === accountEpoch) adminError(error); }
+});
+
+byId('open-admin').onclick = showUsers;
+byId('admin-back').onclick = showUsers;
+window.setInterval(refreshChat, 4000);
+byId('launch-hint').hidden = true;
+refreshSession();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Дневник настроения</string>
+    <string name="server_url" translatable="false"></string>
+    <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#EAF1EA</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">#EAF1EA</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowBackground">#EAF1EA</item>
+    </style>
+</resources>
