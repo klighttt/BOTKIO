@@ -1,4 +1,7 @@
 PRAGMA journal_mode = WAL;
+CREATE TABLE IF NOT EXISTS applied_migrations (
+ name TEXT PRIMARY KEY
+);
 CREATE TABLE IF NOT EXISTS users (
  id INTEGER PRIMARY KEY, login TEXT NOT NULL, login_key TEXT UNIQUE NOT NULL,
  password_hash TEXT NOT NULL, created_at TEXT NOT NULL, last_login TEXT,

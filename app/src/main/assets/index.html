@@ -108,7 +108,7 @@ header{padding:6px 5px 16px;border-bottom:0}
 .brand-mark{height:35px;width:35px;border:1px solid var(--edge)}
 .brand-mark svg{width:21px;fill:none;stroke:currentColor;stroke-width:1.55;stroke-linecap:round}
 main{padding:0}
-.screen-card,#survey,#settings,#history,#unavailable{
+.screen-card,#survey,#settings,#profile,#unavailable{
  padding:clamp(14px,4.5vw,22px);border:1px solid var(--line);border-radius:24px;
  background:var(--surface);box-shadow:0 8px 24px var(--shadow)
 }
@@ -300,11 +300,13 @@ progress{margin-bottom:19px;height:6px}
     <p class="empty">Не удалось получить данные аккаунта. Проверьте, что сервер запущен, и повторите попытку.</p>
     <button type="button" id="retry-storage" class="outline">Повторить проверку</button>
   </section>
-  <section id="history" aria-labelledby="history-title" hidden>
-    <h1 id="history-title" tabindex="-1">История настроения</h1>
-    <p class="intro">Сохранённый результат этого аккаунта.</p>
-    <p id="empty-history" class="empty" hidden></p>
-    <ul class="history-list" id="history-list"></ul>
+  <section id="profile" aria-labelledby="profile-title" hidden>
+    <h1 id="profile-title" tabindex="-1">Профиль</h1>
+    <p class="intro" id="profile-login"></p>
+    <section aria-labelledby="history-title">
+      <h2 id="history-title">История настроения</h2>
+      <ul class="history-list" id="history-list"></ul>
+    </section>
   </section>
 </main>
 <nav class="tabs" id="tabs" aria-label="Разделы приложения" hidden>
@@ -317,9 +319,9 @@ progress{margin-bottom:19px;height:6px}
     Настройки
   </button>
   <button type="button" id="open-admin" aria-controls="admin" hidden><span aria-hidden="true">⚙</span>Админ</button>
-  <button type="button" id="open-history" aria-controls="history">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg>
-    История
+  <button type="button" id="open-profile" aria-controls="profile">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20v-2a7 7 0 0 1 14 0v2"/></svg>
+    Профиль
   </button>
   <button type="button" id="open-support" aria-controls="support">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H9l-5 4zM8 9h8m-8 4h5"/></svg>
@@ -402,7 +404,7 @@ const radios = Array.from(document.querySelectorAll('input[name="answer"]'));
 const styleInputs = Array.from(document.querySelectorAll('input[name="style"]'));
 const sections = {
   account:'account-title', survey:'question', home:'home-title', settings:'settings-title',
-  history:'history-title', support:'support-title', admin:'admin-title', unavailable:'unavailable-title'
+  profile:'profile-title', support:'support-title', admin:'admin-title', unavailable:'unavailable-title'
 };
 const dateFormatter = new Intl.DateTimeFormat('ru-RU', {day:'numeric', month:'long', year:'numeric', timeZone:'UTC'});
 let savedResult = null;
@@ -448,7 +450,7 @@ function resetAccount() {
   currentQuestion = 0;
   for (const id of ['note', 'support-text', 'reply-text', 'password']) byId(id).value = '';
   for (const id of ['dialog', 'admin-dialog', 'admin-events', 'admin-users', 'history-list']) byId(id).replaceChildren();
-  for (const id of ['note-status', 'support-status', 'admin-status']) byId(id).textContent = '';
+  for (const id of ['note-status', 'support-status', 'admin-status', 'profile-login']) byId(id).textContent = '';
   byId('settings-message').hidden = true;
   byId('save-message').hidden = true;
   byId('note').closest('details').open = false;
@@ -488,7 +490,7 @@ function showScreen(name, moveFocus = true) {
   byId('logout').hidden = account === null;
   byId('tabs').hidden = !hasResult;
   document.body.classList.toggle('has-navigation', hasResult);
-  for (const [id, target] of [['open-main', 'home'], ['open-settings', 'settings'], ['open-history', 'history'], ['open-support', 'support'], ['open-admin', 'admin']]) {
+  for (const [id, target] of [['open-main', 'home'], ['open-settings', 'settings'], ['open-profile', 'profile'], ['open-support', 'support'], ['open-admin', 'admin']]) {
     if (name === target) byId(id).setAttribute('aria-current', 'page');
     else byId(id).removeAttribute('aria-current');
   }
@@ -568,8 +570,9 @@ function applyStyle(style) {
   for (const input of styleInputs) input.checked = input.value === selected;
 }
 
-function showHistory() {
-  if (savedResult === null) return;
+function showProfile() {
+  if (!account || savedResult === null) return;
+  byId('profile-login').textContent = account.login;
   const rows = [savedResult].map(({date, score, note: savedNote}) => {
     const mood = moodFor(score);
     const row = document.createElement('li');
@@ -596,9 +599,8 @@ function showHistory() {
     }
     return row;
   });
-  byId('empty-history').hidden = true;
   byId('history-list').replaceChildren(...rows);
-  showScreen('history');
+  showScreen('profile');
 }
 
 byId('options').addEventListener('change', event => {
@@ -694,7 +696,7 @@ byId('logout').onclick = async () => {
   finally { logoutBusy = byId('logout').disabled = false; }
 };
 
-byId('open-history').onclick = () => { track('open_history'); showHistory(); };
+byId('open-profile').onclick = () => { track('open_profile'); showProfile(); };
 byId('open-main').onclick = () => { track('open_home'); openMain(); };
 byId('open-settings').onclick = () => {
   if (savedResult) { track('open_settings'); showScreen('settings'); }
@@ -819,7 +821,7 @@ async function showUsers() {
 
 const activityLabels = {
   register:'Регистрация', login:'Вход', logout:'Выход', login_failed:'Неудачная попытка входа',
-  open_home:'Главная', open_settings:'Настройки', open_history:'История', open_support:'Поддержка',
+  open_home:'Главная', open_settings:'Настройки', open_history:'История', open_profile:'Профиль', open_support:'Поддержка',
   answer_question:'Выбран ответ', previous_question:'Предыдущий вопрос', complete_survey:'Опрос завершён',
   save_note:'Заметка сохранена', clear_note:'Заметка очищена', change_style:'Стиль изменён',
   send_message:'Сообщение в поддержку', receive_support_reply:'Ответ поддержки получен',

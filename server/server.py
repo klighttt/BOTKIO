@@ -24,7 +24,7 @@ KDF_SLOTS = BoundedSemaphore(2)
 ATTEMPTS = {}
 ATTEMPT_LOCK = Lock()
 ACTIONS = {
-    "open_home", "open_settings", "open_history", "open_support",
+    "open_home", "open_settings", "open_history", "open_profile", "open_support",
     "answer_question", "previous_question",
 }
 
@@ -352,6 +352,25 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
+def grant_existing_klight(db):
+    migration = db.execute(
+        "INSERT INTO applied_migrations(name) VALUES (?) ON CONFLICT DO NOTHING RETURNING name",
+        ("grant_existing_klight_admin",),
+    ).fetchone()
+    if migration is None:
+        return
+    user = db.execute(
+        """UPDATE users SET is_admin=1
+           WHERE login_key=? AND is_admin=0 AND NOT EXISTS (
+               SELECT 1 FROM activity WHERE user_id=users.id AND action='admin_revoked'
+           )
+           RETURNING id""",
+        ("klight",),
+    ).fetchone()
+    if user is not None:
+        audit(db, user["id"], "admin_granted")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--db", type=Path, default=ROOT / "mood.sqlite3")
@@ -378,6 +397,7 @@ def main():
             audit(db, row["id"], "admin_granted" if admin else "admin_revoked")
             print("Роль обновлена.")
             return
+        grant_existing_klight(db)
     origins = {f"http://{host}:{args.port}" for host in ("127.0.0.1", "localhost", "10.0.2.2")}
     if args.https_origin:
         origin = urlsplit(args.https_origin)
